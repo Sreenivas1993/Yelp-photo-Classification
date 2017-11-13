@@ -1,17 +1,17 @@
-# Yelp-photo-Classification__
-Convolutional Neural Network using Pytorch for Image Classification__
+# Yelp-photo-Classification<br/>
+Convolutional Neural Network using Pytorch for Image Classification<br/>
 
-Input
-1.Photos- Restaurant photos__
-2.Labels-(Json file)-inside,outside,food,drink,menu__
+Input<br/>
+1.Photos- Restaurant photos<br/>
+2.Labels-(Json file)-inside,outside,food,drink,menu<br/>
 
-Preprocessing__
-1. Extracted required fields from JSON files__
-2. Converted it into csv file__
-3. Created an Imagedataset class for loading mages and labels were appended to it__
+Preprocessing<br/>
+1. Extracted required fields from JSON files<br/>
+2. Converted it into csv file<br/>
+3. Created an Imagedataset class for loading mages and labels were appended to it<br/>
 
-Classification
-Model-CNN__
-Loss function-Cross Entropy__
-Library-Pytorch__
+Classification<br/>
+Model-CNN<br/>
+Loss function-Cross Entropy<br/>
+Library-Pytorch<br/>
 
