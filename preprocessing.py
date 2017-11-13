@@ -1,8 +1,6 @@
 import json
 import pandas as pd
 import sys
-import numpy as np
-from sklearn import preprocessing
 if __name__=="__main__":
     #Taking input file as argument
     inputfile=sys.argv[1]
@@ -12,7 +10,7 @@ if __name__=="__main__":
     result=[]
     for item in json_data:
         my_dict={}
-        my_dict['photoid']=item.get('photo_id')
+        my_dict['photoid']=item.get('photo_id')+'.jpg'
         my_dict['label']=item.get('label')
         result.append(my_dict)
     df=pd.DataFrame(result)
