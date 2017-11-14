@@ -17,6 +17,7 @@ import argparse
 from sklearn.metrics import accuracy_score,confusion_matrix
 import imageloading as Image
 import numpy as np
+import pandas as pd
 #Training Settings
 parser = argparse.ArgumentParser(description='Image classification')
 parser.add_argument('--data', metavar='DIR',
@@ -45,13 +46,14 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
 #Buiding convolutional neural network
 class Net(nn.Module):
     def __init__(self):
-        super(Net,self)._init_()
+        super(Net,self).__init__()
         self.conv1=nn.Conv2d(3,5,5)
         self.pool=nn.MaxPool2d(2)
         self.conv2=nn.Conv2d(5,5,5)
         self.fc1=nn.Linear(5*53*53,20)
         self.fc2=nn.Linear(20,25)
         self.fc3=nn.Linear(25,5)
+        
         
     def forward(self,x):
         x=self.pool(F.relu(self.conv1(x)))
@@ -65,7 +67,7 @@ class Net(nn.Module):
         return F.log_softmax(x)
 
 #Train function
-def train(model,train_loader,criterion,optimizer,epoch):
+def train(model,train_loader,optimizer,epoch):
     model.train()
     for batch_idx,(data,target) in enumerate(train_loader):
         if args.cuda:
@@ -73,9 +75,7 @@ def train(model,train_loader,criterion,optimizer,epoch):
         data,target=Variable(data),Variable(target)
         optimizer.zero_grad()
         output=model(data)
-        if args.cuda:
-            criterion=criterion.cuda()
-        loss=criterion(output,target)
+        loss=F.nll_loss(output,target.long())
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
@@ -83,7 +83,7 @@ def train(model,train_loader,criterion,optimizer,epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data[0]))
 #Test function
-def test(model,test_loader,criterion):
+def test(model,test_loader):
     model.eval()
     test_loss=0
     correct=0
@@ -92,9 +92,7 @@ def test(model,test_loader,criterion):
             data,target=data.cuda(),target.cuda()
         data,target=Variable(data),Variable(target)
         output=model(data)
-        if args.cuda:
-            criterion=criterion.cuda()
-        test_loss+=criterion(output,target)
+        test_loss+=F.nll_loss(output,target,size_average=False).data[0]
         pred=output.data.max(1,keepdim=True)[1]
         correct += pred.eq(target.data.view_as(pred)).cpu().sum()
         test_loss /= len(test_loader.dataset)
@@ -141,13 +139,13 @@ if __name__=="__main__":
     train_sampler=torch.utils.data.sampler.SubsetRandomSampler(train_idx)
     validation_sampler=torch.utils.data.sampler.SubsetRandomSampler(validation_idx)
     #dataloader for train test and validation
-    train_loader=torch.utils.data.DataLoader(train_sampler,batch_size=args.batchsize)
-    test_loader=torch.utils.data.DataLoader(test_sampler,batch_size=args.testbatchsize)
-    validation_loader=torch.utils.data.DataLoader(validation_sampler,batch_size=args.validbatchsize)
+    train_loader=torch.utils.data.DataLoader(imagedataset,sampler=train_sampler,batch_size=args.batchsize)
+    test_loader=torch.utils.data.DataLoader(imagedataset,sampler=test_sampler,batch_size=args.testbatchsize)
+    validation_loader=torch.utils.data.DataLoader(imagedataset,sampler=validation_sampler,batch_size=args.validbatchsize)
     #Training phase
     for epoch in range(0,args.epochs):
-        train(model,train_loader,optimizer,criterion,epoch)
-        test(model,test_loader,criterion)
+        train(model,train_loader,optimizer,epoch)
+        test(model,test_loader)
         
     
     

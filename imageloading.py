@@ -8,6 +8,7 @@ from PIL import Image
 import os
 import os.path
 import pandas as pd
+import torch.utils.data as data
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
         with open(path, 'rb') as f:
@@ -25,7 +26,7 @@ def default_loader(path):
         return accimage_loader(path)
     else:
         return pil_loader(path)
-class Imagedataset(Dataset):
+class Imagedataset(data.Dataset):
     #Init function taking csv files for labels and root directory for images
     def __init__(self,root_dir,csv_file,transform=None,loader=default_loader):
         self.labelfile=pd.read_csv(csv_file)
@@ -39,7 +40,7 @@ class Imagedataset(Dataset):
     def __getitem__(self,idx):
         img_name=os.path.join(self.root_dir,self.labelfile.ix[idx,0])
         image=self.loader(img_name)
-        label=self.labelfile.ix[idx,1].astype('int')
+        label=self.labelfile.ix[idx,1].astype('float')
         if self.transform:
             image=self.transform(image)
         return image,label
