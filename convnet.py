@@ -109,9 +109,7 @@ if __name__=="__main__":
     model=Net()
     if args.cuda:
         model.cuda()
-    #optimizer and criterion for neural network
-    criterion=nn.CrossEntropyLoss()
-    optimizer=optim.SGD(model.parameters(),lr=args.lr,momentum=args.momentum)
+    #optimizer and criterion for neural network    optimizer=optim.SGD(model.parameters(),lr=args.lr,momentum=args.momentum)
     #normalizing data
     normalize=transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
