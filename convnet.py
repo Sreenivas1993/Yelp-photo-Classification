@@ -5,10 +5,7 @@ Created on Sun Nov  5 18:36:57 2017
 @author: Sreenivas
 """
 import torch
-import torchvision
 from torch.autograd import Variable
-from torchvision import models
-from torchvision import datasets
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +14,7 @@ import argparse
 from sklearn.metrics import accuracy_score,confusion_matrix
 import imageloading as Image
 import numpy as np
-import pandas as pd
+from sklearn.model_selection import train_test_split
 #Training Settings
 parser = argparse.ArgumentParser(description='Image classification')
 parser.add_argument('--data', metavar='DIR',
@@ -53,8 +50,6 @@ class Net(nn.Module):
         self.fc1=nn.Linear(5*53*53,20)
         self.fc2=nn.Linear(20,25)
         self.fc3=nn.Linear(25,5)
-        
-        
     def forward(self,x):
         x=self.pool(F.relu(self.conv1(x)))
         x=self.pool(F.relu(self.conv2(x)))
@@ -65,7 +60,22 @@ class Net(nn.Module):
         x=F.dropout(x,training=self.training)
         x=self.fc3(x)
         return F.log_softmax(x)
-
+#Transformation functions
+def train_transformation(train_dataset,transform):
+    train_transform=[]
+    for value in train_dataset:
+        train_transform.append((transform(value[0]),value[1]))
+    return train_transform
+def test_transformation(test_dataset,transform):
+    test_transform=[]
+    for value in test_dataset:
+        test_transform.append((transform(value[0]),value[1]))
+    return test_transform
+def validation_transformation(test_dataset,transform):
+    valid_transform=[]
+    for value in test_dataset:
+        valid_transform.append((transform(value[0]),value[1]))
+    return valid_transform
 #Train function
 def train(model,train_loader,optimizer,epoch):
     model.train()
@@ -83,22 +93,16 @@ def train(model,train_loader,optimizer,epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data[0]))
 #Test function
-def test(model,test_loader):
+def validation(model,test_loader):
     model.eval()
-    test_loss=0
     correct=0
     for batch_idx,(data,target) in enumerate(test_loader):
-        if args.cuda:
-            data,target=data.cuda(),target.cuda()
-        data,target=Variable(data),Variable(target)
-        output=model(data)
-        test_loss+=F.nll_loss(output,target,size_average=False).data[0]
-        pred=output.data.max(1,keepdim=True)[1]
-        correct += pred.eq(target.data.view_as(pred)).cpu().sum()
-        test_loss /= len(test_loader.dataset)
-        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+        output=model(Variable(data))
+        _,predicted=torch.max(output.data,1)
+        correct+=(predicted==target.long()).sum()
+    accuracy=100*(correct/len(test_loader.dataset))
+    print('Accuracy of the network on the  test images: %d %%' % (accuracy))
+    return accuracy
 #Main function
 if __name__=="__main__":
     args = parser.parse_args()
@@ -109,42 +113,42 @@ if __name__=="__main__":
     model=Net()
     if args.cuda:
         model.cuda()
-    #optimizer and criterion for neural network    optimizer=optim.SGD(model.parameters(),lr=args.lr,momentum=args.momentum)
+    #optimizer and criterion for neural network    
+    optimizer=optim.SGD(model.parameters(),lr=args.lr,momentum=args.momentum)
     #normalizing data
     normalize=transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-    transform=transforms.Compose([transforms.RandomSizedCrop(224),
+    train_transform=transforms.Compose([transforms.RandomSizedCrop(224),
             transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize])
+    test_transform=transforms.Compose([transforms.RandomSizedCrop(224),
+            transforms.ToTensor(),
+            normalize])
+    validation_transform=transforms.Compose([transforms.RandomSizedCrop(224),
             transforms.ToTensor(),
             normalize])
     #taking directory with image folder from command line
     imagedir=args.data
     labelfile=args.label
     #calling class from imageloading
-    imagedataset=Image.Imagedataset(imagedir,labelfile,transform)
+    imagedataset=Image.Imagedataset(imagedir,labelfile)
     #splitting datasets into train,test and validation datasets
-    inputfilelength=len(imagedataset)
-    indices=list(range(inputfilelength))
-    # splitting tensor dataset into 70% for training and 10% validation and 20% for testing
-    split=int(np.floor(0.2*inputfilelength))
-    trainvalid_idx,test_idx=indices[split:],indices[:split]
-    trainvalid_sampler=torch.utils.data.sampler.SubsetRandomSampler(trainvalid_idx)
-    test_sampler=torch.utils.data.sampler.SubsetRandomSampler(test_idx)
-    trainvalidlength=len(trainvalid_sampler)
-    trainvalidindices=list(range(trainvalidlength))
-    trainvalidsplit=int(np.floor(0.1*trainvalidlength))
-    train_idx,validation_idx=trainvalidindices[trainvalidsplit:],trainvalidindices[:trainvalidsplit]
-    train_sampler=torch.utils.data.sampler.SubsetRandomSampler(train_idx)
-    validation_sampler=torch.utils.data.sampler.SubsetRandomSampler(validation_idx)
+    trainvaliddataset,testdataset=train_test_split(imagedataset,test_size=0.2,random_state=0)
+    traindataset,validdataset=train_test_split(trainvaliddataset,test_size=0.2,random_state=0)
+    #Transformation of image into tensor
+    traindataset=train_transformation(traindataset,train_transform)
+    testdataset=test_transformation(testdataset,test_transform)
+    validdataset=validation_transformation(validdataset,validation_transform)
     #dataloader for train test and validation
-    train_loader=torch.utils.data.DataLoader(imagedataset,sampler=train_sampler,batch_size=args.batchsize)
-    test_loader=torch.utils.data.DataLoader(imagedataset,sampler=test_sampler,batch_size=args.testbatchsize)
-    validation_loader=torch.utils.data.DataLoader(imagedataset,sampler=validation_sampler,batch_size=args.validbatchsize)
+    train_loader=torch.utils.data.DataLoader(traindataset,batch_size=args.batchsize)
+    test_loader=torch.utils.data.DataLoader(testdataset,batch_size=args.testbatchsize)
+    validation_loader=torch.utils.data.DataLoader(validdataset,batch_size=args.validbatchsize)
     #Training phase
     for epoch in range(0,args.epochs):
         train(model,train_loader,optimizer,epoch)
-        test(model,test_loader)
-        
+        validation(model,test_loader)
+       
     
     
     

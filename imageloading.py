@@ -28,10 +28,9 @@ def default_loader(path):
         return pil_loader(path)
 class Imagedataset(data.Dataset):
     #Init function taking csv files for labels and root directory for images
-    def __init__(self,root_dir,csv_file,transform=None,loader=default_loader):
+    def __init__(self,root_dir,csv_file,loader=default_loader):
         self.labelfile=pd.read_csv(csv_file)
         self.root_dir=root_dir
-        self.transform=transform
         self.loader=loader
     #Length of dataset
     def __len__(self):
@@ -40,9 +39,7 @@ class Imagedataset(data.Dataset):
     def __getitem__(self,idx):
         img_name=os.path.join(self.root_dir,self.labelfile.ix[idx,0])
         image=self.loader(img_name)
-        label=self.labelfile.ix[idx,1].astype('float')
-        if self.transform:
-            image=self.transform(image)
+        label=self.labelfile.ix[idx,1].astype('int')
         return image,label
     
         
