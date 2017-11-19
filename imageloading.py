@@ -40,6 +40,8 @@ class Imagedataset(data.Dataset):
         img_name=os.path.join(self.root_dir,self.labelfile.ix[idx,0])
         image=self.loader(img_name)
         label=self.labelfile.ix[idx,1].astype('int')
+        if(label==None):
+            label=1
         return image,label
     
         
