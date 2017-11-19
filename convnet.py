@@ -93,7 +93,7 @@ def train(model,train_loader,optimizer,epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data[0]))
 #Test function
-def validation(model,test_loader):
+def test(model,test_loader):
     model.eval()
     correct=0
     for batch_idx,(data,target) in enumerate(test_loader):
@@ -101,7 +101,6 @@ def validation(model,test_loader):
         _,predicted=torch.max(output.data,1)
         correct+=(predicted==target.long()).sum()
     accuracy=100*(correct/len(test_loader.dataset))
-    print('Accuracy of the network on the  test images: %d %%' % (accuracy))
     return accuracy
 #Main function
 if __name__=="__main__":
@@ -129,10 +128,10 @@ if __name__=="__main__":
             transforms.ToTensor(),
             normalize])
     #taking directory with image folder from command line
-    imagedir=args.data
+    imagefile=args.data
     labelfile=args.label
     #calling class from imageloading
-    imagedataset=Image.Imagedataset(imagedir,labelfile)
+    imagedataset=Image.Imagedataset(imagefile,labelfile)
     #splitting datasets into train,test and validation datasets
     trainvaliddataset,testdataset=train_test_split(imagedataset,test_size=0.2,random_state=0)
     traindataset,validdataset=train_test_split(trainvaliddataset,test_size=0.2,random_state=0)
@@ -145,11 +144,16 @@ if __name__=="__main__":
     test_loader=torch.utils.data.DataLoader(testdataset,batch_size=args.testbatchsize)
     validation_loader=torch.utils.data.DataLoader(validdataset,batch_size=args.validbatchsize)
     #Training phase
+    prev_accuracy=0
     for epoch in range(0,args.epochs):
         train(model,train_loader,optimizer,epoch)
-        validation(model,test_loader)
-       
-    
+        accuracy=test(model,validation_loader)
+        print('Accuracy of the network on the validation images: %d %%' % (accuracy))
+        if(prev_accuracy>accuracy):break
+        prev_accuracy=accuracy
+    accuracy=test(model,test_loader)
+    print('Accuracy of network on test images:%d %%' %(accuracy))
+    torch.save(model.state_dict,'training.pt')
     
     
     
