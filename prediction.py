@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Nov 18 09:04:56 2017
+
+@author: Sreenivas
+"""
+
+import torch
+from torch.autograd import Variable
+import torchvision.transforms as transforms
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import imagedataset as Image
+import sys
+import pandas as pd
+
+labelfile=['drink','food','inside','menu','outside']
+#Prediction of images
+def prediction(model,imageloader):
+    pred=[]
+    for batch_idx,(data) in enumerate(imageloader):
+        output=model(Variable(data))
+        _,predicted=torch.max(output.data,1)
+        pred.append(labelfile[predicted])
+    return pred
+#Main function
+if __name__=="__main__":
+    #Load modelfile,imagefolder,labelfile
+    modelfile=sys.argv[1]
+    imagefolder=sys.argv[2]
+    photoidfile=sys.argv[3]
+    model=torch.load(modelfile)
+    #Transformation of inpyt image into tensor of range 0...1
+    normalize=transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+    transform=transforms.Compose([transforms.RandomSizedCrop(224),
+            transforms.ToTensor(),
+            normalize])
+    #Forming imagedataset
+    imagedataset=Image.Imagedataset(imagefolder,photoidfile,transform)
+    imageloader=torch.utils.data.DataLoader(imagedataset)
+    #list of prediction
+    labellist=prediction(model,imageloader)
+    #saving results to csv file
+    labeldf=pd.DataFrame(labellist)
+    labeldf.to_csv('prediction.csv',index=False)
+        
