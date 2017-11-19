@@ -153,7 +153,7 @@ if __name__=="__main__":
         prev_accuracy=accuracy
     accuracy=test(model,test_loader)
     print('Accuracy of network on test images:%d %%' %(accuracy))
-    torch.save(model.state_dict,'training.pt')
+    torch.save(model.state_dict,'training.pth.tar')
     
     
     
