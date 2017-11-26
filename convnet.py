@@ -97,6 +97,8 @@ def test(model,test_loader):
     model.eval()
     correct=0
     for batch_idx,(data,target) in enumerate(test_loader):
+      if args.cuda:
+            data,target=data.cuda(),target.cuda()
         output=model(Variable(data))
         _,predicted=torch.max(output.data,1)
         correct+=(predicted==target.long()).sum()
