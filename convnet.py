@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Nov  5 18:36:57 2017
+
 @author: Sreenivas
 """
 import torch
@@ -96,11 +97,7 @@ def test(model,test_loader):
     correct=0
     counter=0
     for batch_idx,(data,target) in enumerate(test_loader):
-<<<<<<< HEAD
         if args.cuda:
-=======
-      if args.cuda:
->>>>>>> origin/master
             data,target=data.cuda(),target.cuda()
         output=model(Variable(data))
         _,predicted=torch.max(output.data,1)
