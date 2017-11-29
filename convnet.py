@@ -11,10 +11,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import argparse
-from sklearn.metrics import accuracy_score,confusion_matrix
 import imagelabel as Image
-import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix,f1_score
 #Training Settings
 parser = argparse.ArgumentParser(description='Image classification')
 parser.add_argument('--data', metavar='DIR',
@@ -33,7 +32,7 @@ parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                     help='SGD momentum (default: 0.5)')
 #I ahve made no cuda default True->change when gpu is set up
-parser.add_argument('--no-cuda', action='store_true', default=True,
+parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
@@ -96,12 +95,28 @@ def train(model,train_loader,optimizer,epoch):
 def test(model,test_loader):
     model.eval()
     correct=0
+    counter=0
     for batch_idx,(data,target) in enumerate(test_loader):
+        if args.cuda:
+            data,target=data.cuda(),target.cuda()
         output=model(Variable(data))
         _,predicted=torch.max(output.data,1)
-        correct+=(predicted==target.long()).sum()
+        if counter==0:
+            trueList=target.long()
+            predictedList=predicted.view(len(predicted))
+        else:
+            trueList=torch.cat((trueList,target.long()),0)
+            predictedList=torch.cat((predictedList,predicted.view(len(predicted))),0)
+        correct+=(predicted==target.long().view(-1,1)).sum()
+        counter=counter+1
     accuracy=100*(correct/len(test_loader.dataset))
-    return accuracy
+    return accuracy,trueList,predictedList
+#Converting categorical variables to original labels
+def vallabels(valueList,labels):
+    convList=[]
+    for value in valueList:
+        convList.append(labels[value])
+    return convList
 #Main function
 if __name__=="__main__":
     args = parser.parse_args()
@@ -147,12 +162,50 @@ if __name__=="__main__":
     prev_accuracy=0
     for epoch in range(0,args.epochs):
         train(model,train_loader,optimizer,epoch)
-        accuracy=test(model,validation_loader)
+        accuracy,predictedList,trueList=test(model,validation_loader)
         print('Accuracy of the network on the validation images: %d %%' % (accuracy))
         if(prev_accuracy>accuracy):break
         prev_accuracy=accuracy
-    accuracy=test(model,test_loader)
+    accuracy,predictedList,trueList=test(model,test_loader)
     print('Accuracy of network on test images:%d %%' %(accuracy))
+    print('ROC Curve')
+    labels=['drink','food','inside','menu','outside']
+    predlabels=vallabels(predictedList,labels)
+    truelabels=vallabels(trueList,labels)
+    print('...................Confusion Matrix.........................')
+    confusionmatrix=confusion_matrix(truelabels,predlabels,labels=['drink','food','inside','menu','outside'])
+    print(confusionmatrix)
+    print('...................Precision............................')
+    #taking row sumand column sum of confusion matrix
+    col_sum=confusion_matrix.sum(axis=0)
+    row_sum=confusion_matrix.sum(axis=1)
+    precision=dict()
+    recall=dict()
+    f1score=dict()
+    for i in range(5):
+        if(col_sum[i]!=0):
+            precision[i]=confusion_matrix[i][i]/col_sum[i]
+        else:
+            precision[i]=0
+        if(row_sum[i]!=0):
+            recall[i]=confusion_matrix[i][i]/row_sum[i]
+        else:
+            recall[i]=0
+    print(labels)
+    print(precision.values())
+    print('.....................Recall.............................')
+    print(labels)
+    print(recall.values())
+    print('.....................F1 Measure..........................')
+    #converting predicted list and target list into numpy
+    trueval=trueList.numpy()
+    predictedval=predictedList.numpy()
+    macrof1score=f1_score(trueval,predictedval,average='macro')
+    print('F1 Score with Macro average:',macrof1score)
+    microf1score=f1_score(trueval,predictedval,average='micro')
+    print('F1 Score with Micro average:',microf1score)
+    weightedf1score=f1_score(trueval,predictedval,average='weighted')
+    print('F1 Score with weighted average:',weightedf1score)
     torch.save(model,'training.pt')
     
     
