@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Nov  5 18:36:57 2017
-
 @author: Sreenivas
 """
 import torch
