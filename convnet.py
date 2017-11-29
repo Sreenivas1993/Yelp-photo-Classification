@@ -97,7 +97,11 @@ def test(model,test_loader):
     correct=0
     counter=0
     for batch_idx,(data,target) in enumerate(test_loader):
+<<<<<<< HEAD
         if args.cuda:
+=======
+      if args.cuda:
+>>>>>>> origin/master
             data,target=data.cuda(),target.cuda()
         output=model(Variable(data))
         _,predicted=torch.max(output.data,1)
