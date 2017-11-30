@@ -14,6 +14,7 @@ import argparse
 import imagelabel as Image
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix,f1_score
+import warnings
 #Training Settings
 parser = argparse.ArgumentParser(description='Image classification')
 parser.add_argument('--data', metavar='DIR',
@@ -177,18 +178,18 @@ if __name__=="__main__":
     print(confusionmatrix)
     print('...................Precision............................')
     #taking row sumand column sum of confusion matrix
-    col_sum=confusion_matrix.sum(axis=0)
-    row_sum=confusion_matrix.sum(axis=1)
+    col_sum=confusionmatrix.sum(axis=0)
+    row_sum=confusionmatrix.sum(axis=1)
     precision=dict()
     recall=dict()
     f1score=dict()
     for i in range(5):
         if(col_sum[i]!=0):
-            precision[i]=confusion_matrix[i][i]/col_sum[i]
+            precision[i]=confusionmatrix[i][i]/col_sum[i]
         else:
             precision[i]=0
         if(row_sum[i]!=0):
-            recall[i]=confusion_matrix[i][i]/row_sum[i]
+            recall[i]=confusionmatrix[i][i]/row_sum[i]
         else:
             recall[i]=0
     print(labels)
@@ -198,8 +199,13 @@ if __name__=="__main__":
     print(recall.values())
     print('.....................F1 Measure..........................')
     #converting predicted list and target list into numpy
-    trueval=trueList.numpy()
-    predictedval=predictedList.numpy()
+    if args.cuda:
+        trueval=trueList.cpu().numpy()
+        predictedval=predictedList.cpu().numpy()
+    else:
+        trueval=trueList.numpy()
+        predictedval=predictedList.numpy()
+    warnings.filterwarnings("ignore")
     macrof1score=f1_score(trueval,predictedval,average='macro')
     print('F1 Score with Macro average:',macrof1score)
     microf1score=f1_score(trueval,predictedval,average='micro')
